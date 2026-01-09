@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
+  <title>Flores Amarillas 🌼</title>
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  
+  <link href="https://fonts.googleapis.com/css2?family=Merienda:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    html,body { height:100%; margin:0; -webkit-touch-callout:none; -webkit-user-select:none; }
+    body { font-family: 'Merienda', Arial, Helvetica, sans-serif; background: linear-gradient(180deg,#cfe9ff 0%, #f0fff4 70%); }
+    #canvas-holder { position:fixed; inset:0; display:flex; align-items:stretch; justify-content:center; }
+    .hint { position:fixed; left:10px; top:10px; color:#333; background:rgba(255,255,255,0.72); padding:6px 10px; border-radius:10px; font-size:14px; box-shadow:0 4px 10px rgba(0,0,0,0.06); }
+    .signature { position:fixed; left:12px; bottom:8px; color:#2b2b2b; font-size:15px; text-shadow:0 1px 0 rgba(255,255,255,0.8); }
+  </style>
+</head>
+<body>
+  <div class="hint">Toca para pausar/reanudar</div>
+  <div class="signature">Buenos días, lindas pequitas🌼</div>
+  <div id="canvas-holder"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/p5@1.6.0/lib/p5.min.js"></script>
+  <script>
+  
+    let flowers = [];
+    let tulips = [];
+    let clouds = [];
+    let spawnTimer = 0;
+    let tulipTimer = 0;
+    let paused = false;
+
+    class Flower {
+      constructor(x, y, petalCount = 6, petalLength = 40, petalColor = '#FFD700', dx = -1.0) {
+        this.x = x;
+        this.y = y;
+        this.petalCount = petalCount;
+        this.petalLength = petalLength;
+        this.petalColor = petalColor;
+        this.dx = dx;
+        this.petalsDrawn = 0;
+        this.age = 0;
+        this.rotation = random(0, TWO_PI);
+      }
+
+      update() {
+        this.x += this.dx;
+        this.age += 1;
+        if (this.age % 6 === 0 && this.petalsDrawn < this.petalCount) {
+          this.petalsDrawn += 1;
+        }
+      }
+
+      draw() {
+        push();
+        translate(this.x, this.y);
+        rotate(this.rotation);
+        noStroke();
+        for (let i = 0; i < this.petalsDrawn; i++) {
+          let angle = TWO_PI * i / this.petalCount;
+          push();
+          rotate(angle);
+          fill(this.petalColor);
+          ellipse(this.petalLength * 0.5, 0, this.petalLength, this.petalLength * 0.65);
+          pop();
+        }
+        fill('#9b5f00');
+        ellipse(0, 0, this.petalLength * 0.45, this.petalLength * 0.45);
+        pop();
+      }
+    }
+
+    class Tulip {
+      constructor(x, groundY, color) {
+        this.x = x;
+        this.groundY = groundY; 
+        this.y = groundY + 30; 
+        this.size = 2; 
+        this.maxSize = random(0.9, 1.4);
+        this.color = color;
+        this.growing = true;
+        this.sway = random(-0.02, 0.02);
+        this.angle = 0;
+      }
+
+      update() {
+        if (this.growing) {
+          this.size += 0.02;
+          if (this.size >= this.maxSize) this.growing = false;
+        } else {
+          this.angle += this.sway;
+        }
+      }
+
+      draw() {
+        push();
+        translate(this.x, this.groundY);
+        rotate(this.angle);
+        // stem
+        stroke('#2b7a3a');
+        strokeWeight(max(2, this.size * 2));
+        line(0, 0, 0, -40 * this.size);
+        noStroke();
+        // leaf
+        fill('#2b7a3a');
+        ellipse(-8, -18 * this.size, 14 * this.size, 8 * this.size);
+        // petals (3 petalos)
+        fill(this.color);
+        let topY = -46 * this.size;
+        ellipse(-6, topY, 18 * this.size, 24 * this.size);
+        ellipse(6, topY, 18 * this.size, 24 * this.size);
+        arc(0, topY, 22 * this.size, 28 * this.size, PI, TWO_PI - 0.2);
+        // center inner
+        fill('#fff2');
+        ellipse(0, topY - 2 * this.size, 6 * this.size, 6 * this.size);
+        pop();
+      }
+    }
+
+    class Cloud {
+      constructor(x, y, s, speed) {
+        this.x = x; this.y = y; this.s = s; this.speed = speed;
+      }
+      update() { this.x += this.speed; if (this.x - 200 > width) this.x = -200; }
+      draw() {
+        push(); translate(this.x, this.y); noStroke(); fill(255, 250);
+        ellipse(0, 0, 80 * this.s, 50 * this.s);
+        ellipse(40 * this.s, 10 * this.s, 70 * this.s, 46 * this.s);
+        ellipse(-40 * this.s, 10 * this.s, 70 * this.s, 46 * this.s);
+        pop();
+      }
+    }
+
+    function setup() {
+      const holder = document.getElementById('canvas-holder');
+      const cnv = createCanvas(windowWidth, windowHeight);
+      cnv.parent(holder);
+      textFont('Merienda');
+      textAlign(LEFT, BOTTOM);
+      frameRate(60);
+
+      
+      for (let i = 0; i < 6; i++) {
+        clouds.push(new Cloud(random(-200, width), random(40, height * 0.35), random(0.7,1.4), random(0.2,0.6)));
+      }
+    }
+
+    function windowResized() { resizeCanvas(windowWidth, windowHeight); }
+
+    function drawBackground() {
+      // smooth sky gradient
+      noStroke();
+      for (let y = 0; y < height; y += 3) {
+        let t = map(y, 0, height, 0, 1);
+        let c = lerpColor(color('#cfe9ff'), color('#f3fff5'), t);
+        fill(c);
+        rect(0, y, width, 3);
+      }
+
+      let sx = width * 0.85, sy = height * 0.18;
+      for (let r = 160; r > 20; r -= 16) {
+        fill(255, 230, 120, map(r,160,0,30,160));
+        ellipse(sx, sy, r * (min(width,height)/600));
+      }
+
+      fill('#e5f6e6');
+      beginShape();
+      vertex(0, height - 80);
+      bezierVertex(width * 0.25, height - 140, width * 0.25, height - 60, width * 0.5, height - 90);
+      bezierVertex(width * 0.75, height - 120, width * 0.85, height - 60, width, height - 80);
+      vertex(width, height);
+      vertex(0, height);
+      endShape(CLOSE);
+
+      fill('#d9f0d9');
+      rect(0, height - 80, width, 80);
+
+     
+      for (let c of clouds) { c.update(); c.draw(); }
+    }
+
+    function draw() {
+      if (paused) return;
+      drawBackground();
+
+      spawnTimer++;
+      if (spawnTimer > 40) {
+        spawnTimer = 0;
+        let y = random(80, height - 140);
+        let petalCount = int(random(5, 9));
+        let petalLen = random(28, 48) * (min(width, height) / 600);
+        let dx = -random(0.6, 1.4) * (min(width, height) / 600);
+        flowers.push(new Flower(width + 80, y, petalCount, petalLen, '#FFD700', dx));
+      }
+
+
+      tulipTimer++;
+      if (tulipTimer > 120) {
+        tulipTimer = 0;
+        let x = random(40, width - 40);
+        let c = random(['#ff6b6b','#ff9aa2','#ffb86b','#ff5ab0']);
+        tulips.push(new Tulip(x, height - 80, c));
+      }
+
+ 
+      for (let i = tulips.length - 1; i >= 0; i--) {
+        let t = tulips[i];
+        t.update();
+        t.draw();
+      }
+
+  
+      for (let i = flowers.length - 1; i >= 0; i--) {
+        let f = flowers[i];
+        f.update();
+        f.draw();
+        if (f.x < -120) flowers.splice(i, 1);
+      }
+
+  
+      fill('#333333');
+      textSize(max(14, floor(height * 0.03)));
+      text('Buenos días, lindas pequitas', 14, height - 12);
+    }
+
+  
+    function touchStarted() { paused = !paused; return false; }
+    function mousePressed() { paused = !paused; }
+
+    function keyPressed() { if (key === 'P' || key === 'p') paused = !paused; }
+  </script>
+</body>
+</html>
