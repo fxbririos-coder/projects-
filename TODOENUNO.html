@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Carta interactiva — Buenos días</title>
+  <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Montserrat:wght@300;600&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#0a0310;
+      --paper:#fffdfd;
+      --btn:#ffbed6;
+      --text:#000000;
+      --accent:#ff6f9a;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased}
+
+    /* Background and layers */
+    body::before{
+      content:"";position:fixed;inset:0;
+      background:
+        radial-gradient(900px 420px at 12% 12%, rgba(255,200,240,0.06), transparent 12%),
+        radial-gradient(700px 320px at 88% 88%, rgba(160,220,255,0.06), transparent 12%),
+        linear-gradient(180deg,#030215,#07102a 70%);
+      z-index:-4; pointer-events:none;
+    }
+    .galaxy { position:fixed; inset:0; z-index:-2; pointer-events:none; }
+    .vignette{ position:fixed; inset:0; z-index:-1; pointer-events:none; background: radial-gradient(ellipse at center, rgba(0,0,0,0) 0%, rgba(0,0,0,0.45) 75%); mix-blend-mode:multiply; }
+
+    .wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:40px;position:relative;overflow:hidden}
+    .panel{ width:600px; max-width:94%; display:flex; flex-direction:column; align-items:center; gap:10px; position:relative; }
+
+    /* MAILBOX */
+    .mailbox{ width:100%; max-width:600px; position:relative; height:460px; display:flex; align-items:flex-start; justify-content:center; }
+
+    .envelope{ width:86%; max-width:520px; transition: transform 700ms cubic-bezier(.18,.9,.22,1), opacity 650ms ease; z-index:6; }
+    .envelope svg{ width:100%; height:auto; display:block; }
+
+    /* Letter */
+    .letter{
+      position:absolute; left:50%; top:56%;
+      width:82%; max-width:460px; transform: translate(-50%, 88%) scale(.98);
+      background: linear-gradient(180deg,var(--paper),#fff9fb); border-radius:10px; padding:30px; box-shadow: 0 32px 68px rgba(6,6,20,0.52);
+      opacity:0; transition: opacity 420ms ease, transform 760ms cubic-bezier(.2,.95,.16,1); z-index:8; display:flex; flex-direction:column; align-items:center; gap:16px;
+    }
+
+    .seal{ position:absolute; right:20px; bottom:20px; width:60px; height:60px; border-radius:999px; background:linear-gradient(180deg,#ff9fbf,#ff5b8f); display:flex; align-items:center; justify-content:center; box-shadow:0 8px 22px rgba(0,0,0,0.2); z-index:9; }
+
+    .msg{ font-family:'Great Vibes', cursive; font-size:44px; font-weight:800; color:var(--text); text-align:center; margin:0; line-height:1.02; }
+
+    .rose-wrap{ width:170px; height:190px; opacity:0; transform: scale(.86) translateY(16px); transition: transform 700ms cubic-bezier(.2,.9,.2,1) 220ms, opacity 520ms ease 220ms; }
+
+    .controls{ width:100%; display:flex; justify-content:center; margin-top:1cm; }
+    .toggle{ appearance:none;border:0;background:linear-gradient(180deg,var(--btn),#ff9fc3);padding:16px 28px;border-radius:999px;font-weight:800;cursor:pointer;color:#21081a;box-shadow:0 12px 34px rgba(0,0,0,0.36); font-size:16px; z-index:60; position:relative; pointer-events:auto; }
+
+    @media (max-width:540px){ .controls{ margin-top:1.6rem; } .msg{ font-size:30px } .rose-wrap{ width:130px; height:140px } }
+
+    .open .envelope{ transform: translateY(-28px) scale(1.01) rotate(-1deg); opacity:0.98; filter: drop-shadow(0 28px 48px rgba(0,0,0,0.32)); }
+    .open .letter{ transform: translate(-50%,-12%) scale(1); opacity:1; animation: slideUpBounce 760ms cubic-bezier(.15,.86,.18,1) both; }
+    .open .rose-wrap{ opacity:1; transform: scale(1) translateY(0); animation: bloom 640ms cubic-bezier(.2,.9,.2,1) 160ms both; }
+
+    @keyframes slideUpBounce{
+      0% { transform: translate(-50%, 88%) scale(.98); opacity:0 }
+      60% { transform: translate(-50%,-18%) scale(1.06); opacity:1 }
+      100% { transform: translate(-50%,-12%) scale(1); opacity:1 }
+    }
+    @keyframes bloom{
+      0%{ transform: scale(.56) translateY(10px); opacity:0 }
+      60%{ transform: scale(1.06) translateY(-8px); opacity:1 }
+      100%{ transform: scale(1) translateY(0) }
+    }
+
+    .heart { fill: #ffd3e6; opacity: 0.9; filter: drop-shadow(0 0 8px rgba(255,100,150,0.12)); }
+    .heart.small{ transform-origin: center; animation: ht 6s linear infinite; }
+    @keyframes ht{ 0%{opacity:0.5} 50%{opacity:1} 100%{opacity:0.5} }
+
+    .hint{ color:rgba(255,255,255,0.9); font-size:13px; margin-top:8px; text-align:center }
+  </style>
+</head>
+<body>
+  <!-- Galaxy background -->
+  <svg class="galaxy" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" aria-hidden="true" viewBox="0 0 1200 800">
+    <defs>
+      <radialGradient id="neb1" cx="20%" cy="20%"><stop offset="0%" stop-color="#fff0f6" stop-opacity="0.44"/><stop offset="60%" stop-color="#ffb3d0" stop-opacity="0.14"/><stop offset="100%" stop-color="#0c0220" stop-opacity="0"/></radialGradient>
+      <radialGradient id="neb2" cx="80%" cy="80%"><stop offset="0%" stop-color="#ffe6f4" stop-opacity="0.34"/><stop offset="60%" stop-color="#ffc0e1" stop-opacity="0.10"/><stop offset="100%" stop-color="#000" stop-opacity="0"/></radialGradient>
+      <radialGradient id="core" cx="50%" cy="40%"><stop offset="0%" stop-color="#ffd6ff" stop-opacity="0.9"/><stop offset="40%" stop-color="#ff9ac8" stop-opacity="0.26"/><stop offset="100%" stop-color="#0b0412" stop-opacity="0"/></radialGradient>
+    </defs>
+
+    <rect x="0" y="0" width="1200" height="800" fill="#060014" />
+    <rect x="0" y="0" width="1200" height="800" fill="url(#neb1)" opacity="0.92" />
+    <rect x="0" y="0" width="1200" height="800" fill="url(#neb2)" opacity="0.86" />
+    <circle cx="420" cy="240" r="320" fill="url(#core)" opacity="0.95" />
+    <g id="hearts"></g>
+    <g id="coreSpark" opacity="0.9"><circle cx="430" cy="220" r="7" fill="#fff1f9" opacity="0.96"></circle><circle cx="450" cy="250" r="4.2" fill="#fff6f0" opacity="0.84"></circle></g>
+  </svg>
+
+  <div class="vignette"></div>
+
+  <main class="wrap">
+    <section class="panel" aria-label="Carta interactiva">
+      <div class="mailbox" id="mailbox" role="group" aria-labelledby="hint">
+        <div class="envelope" id="envelope" aria-hidden="false">
+          <svg viewBox="0 0 500 360" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <rect x="30" y="100" width="440" height="230" rx="18" fill="#ffdfe9" stroke="#ffbfd8" stroke-width="2" />
+            <path d="M30 120 L250 22 L470 120 Z" fill="#ffbfd8" stroke="#ff9fbf" stroke-width="2" />
+            <g transform="translate(250,102)"><path d="M0 10 C-6 4 -14 4 -14 -6 C-14 -18 2 -22 10 -8 C18 -22 34 -18 34 -8 C34 4 26 4 20 10 C14 16 6 16 0 10 Z" fill="#ff6f9a" opacity="0.95" /></g>
+            <path d="M60 150 C190 88 310 88 440 150" stroke="rgba(255,255,255,0.34)" stroke-width="10" fill="none" stroke-linecap="round" opacity="0.42" />
+          </svg>
+        </div>
+
+        <article class="letter" id="letter" role="article" aria-hidden="true">
+          <h1 class="msg" id="msg"><strong>Buenos días, lindas pequitas</strong></h1>
+
+          <div class="rose-wrap" id="rose" aria-hidden="true">
+            <svg viewBox="0 0 140 160" width="170" height="190" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <defs><radialGradient id="petal" cx="30%" cy="20%"><stop offset="0%" stop-color="#ffd4e0"/><stop offset="60%" stop-color="#ff7aa3"/><stop offset="100%" stop-color="#d73a6a"/></radialGradient><linearGradient id="stem" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#3a8a58"/><stop offset="100%" stop-color="#1f5d3a"/></linearGradient></defs>
+              <path d="M70 58 C72 78 68 104 68 120" stroke="url(#stem)" stroke-width="4" stroke-linecap="round" fill="none"/><path d="M70 100 C46 92 40 120 64 116 z" fill="#2e7b48" opacity="0.95"/><g transform="translate(70,44)"><path d="M0 0 C26 -8 40 8 14 28 C-6 34 -24 26 -8 8 z" fill="url(#petal)" opacity="0.98"/><path d="M-8 -6 C16 -28 48 -18 28 8 C12 24 -12 20 -16 8 z" fill="#ff8db0" opacity="0.92"/><path d="M-6 8 C22 28 12 50 -14 30 C-20 24 -4 10 -6 8 z" fill="#ff5b84" opacity="0.86"/><circle cx="8" cy="2" r="6" fill="#ffd4e0" opacity="0.95"/></g>
+            </svg>
+          </div>
+
+          <div class="seal" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="28" height="28" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <path d="M12 20s-6.716-4.5-9.25-8.08C-1.57 6.6 4.8 2.5 7.5 5.3 9.2 6.9 12 10 12 10s2.8-3.1 4.5-4.7c2.7-2.8 9.07 1.3 4.75 6.62C18.716 15.5 12 20 12 20z" fill="#fff" opacity="0.08"></path>
+            </svg>
+          </div>
+        </article>
+      </div>
+
+      <div class="controls">
+        <button id="toggle" class="toggle" aria-expanded="false" aria-controls="mailbox">OPEN</button>
+      </div>
+
+      <p id="hint" class="hint">Pulsa <strong>OPEN</strong> para abrir la carta. El sello es visible en la esquina.</p>
+    </section>
+  </main>
+
+  <script>
+    // Hearts background generation
+    const svgNS = 'http://www.w3.org/2000/svg';
+    const heartsG = document.getElementById('hearts');
+    const W = 1200, H = 800;
+    function rand(min,max){ return Math.random()*(max-min)+min }
+    function createHeart(x,y,size,rot,cls,fill){
+      const g = document.createElementNS(svgNS,'g');
+      g.setAttribute('transform',`translate(${x},${y}) rotate(${rot}) scale(${size})`);
+      const path = document.createElementNS(svgNS,'path');
+      path.setAttribute('d','M0,-6 C-6,-12 -14,-8 -14,-2 C-14,6 -2,12 0,15 C2,12 14,6 14,-2 C14,-8 6,-12 0,-6 Z');
+      path.setAttribute('fill',fill || '#ffd3e6');
+      path.setAttribute('class', 'heart ' + (cls||''));
+      g.appendChild(path);
+      heartsG.appendChild(g);
+    }
+    const heartCount = 90;
+    for(let i=0;i<heartCount;i++){ createHeart(rand(0,W), rand(0,H), rand(0.45,1.45), rand(0,360), (Math.random()<0.6?'small':''), (Math.random()<0.18? '#ffd6a8' : (Math.random()<0.1? '#ffe9f8' : '#ffd3e6'))); }
+    function shootHeart(){ const x1 = rand(0, W*0.85); const y1 = rand(0,H*0.6); const x2 = x1 + rand(120,360); const y2 = y1 - rand(40,120); const heart = document.createElementNS(svgNS,'path'); heart.setAttribute('d','M0,-6 C-6,-12 -14,-8 -14,-2 C-14,6 -2,12 0,15 C2,12 14,6 14,-2 C14,-8 6,-12 0,-6 Z'); heart.setAttribute('fill','#ffffff'); heart.setAttribute('transform',`translate(${x1},${y1}) scale(0.48)`); heart.setAttribute('opacity','0.95'); heart.setAttribute('class','heart'); heartsG.appendChild(heart); const dur = rand(900,1600); heart.animate([{ transform: `translate(${x1}px,${y1}px) scale(0.48)`, opacity: 1 },{ transform: `translate(${x2}px,${y2}px) scale(0.38)`, opacity: 0 }],{ duration: dur, easing: 'cubic-bezier(.2,.9,.2,1)' }); setTimeout(()=> heart.remove(), dur+60); }
+    setInterval(()=> { if(Math.random()<0.45) shootHeart(); }, 900);
+
+    // Interaction: only button opens/closes
+    const mailbox = document.getElementById('mailbox');
+    const toggle = document.getElementById('toggle');
+    const letter = document.getElementById('letter');
+    const rose = document.getElementById('rose');
+
+    function setOpen(on){
+      if(on){
+        mailbox.classList.add('open');
+        toggle.textContent = 'CLOSE';
+        toggle.setAttribute('aria-expanded','true');
+        letter.setAttribute('aria-hidden','false');
+        rose.setAttribute('aria-hidden','false');
+      } else {
+        mailbox.classList.remove('open');
+        toggle.textContent = 'OPEN';
+        toggle.setAttribute('aria-expanded','false');
+        setTimeout(()=> { letter.setAttribute('aria-hidden','true'); rose.setAttribute('aria-hidden','true'); }, 520);
+      }
+    }
+
+    toggle.addEventListener('click', ()=> setOpen(!mailbox.classList.contains('open')));
+    toggle.addEventListener('keydown', (e)=> { if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpen(!mailbox.classList.contains('open')); } });
+
+    // start closed
+    setOpen(false);
+  </script>
+</body>
+</html>
